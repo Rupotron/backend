@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  PARTNER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  REFUND_CANDIDATE
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role     @default(USER)
+  phone        String?
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  addresses      Address[]
+  partnerProfile PartnerProfile?
+  bookings       Booking[]       @relation("UserBookings")
+  reviews        Review[]        @relation("UserReviews")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+}
+
+model PartnerProfile {
+  id     String  @id @default(uuid())
+  userId String  @unique
+  user   User    @relation(fields: [userId], references: [id])
+  bio    String?
+  rating Float   @default(0.0)
+
+  // Performance Metrics
+  totalJobs      Int   @default(0)
+  completedJobs  Int   @default(0)
+  cancelledJobs  Int   @default(0)
+  acceptanceRate Float @default(0)
+
+  // Status
+  isOnline Boolean @default(false)
+  isBusy   Boolean @default(false)
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  partnerServices PartnerService[]
+  bookings        Booking[]        @relation("PartnerBookings")
+  reviews         Review[]         @relation("PartnerReviews")
+  availabilities  Availability[]
+  location        PartnerLocation?
+}
+
+model ServiceCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services Service[]
+}
+
+model Service {
+  id              String          @id @default(uuid())
+  categoryId      String
+  category        ServiceCategory @relation(fields: [categoryId], references: [id])
+  name            String
+  description     String?
+  basePrice       Float
+  durationMinutes Int
+  isActive        Boolean         @default(true)
+  isDeleted       Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  partnerServices PartnerService[]
+  bookings        Booking[]
+}
+
+model PartnerService {
+  id               String         @id @default(uuid())
+  partnerProfileId String
+  partnerProfile   PartnerProfile @relation(fields: [partnerProfileId], references: [id])
+  serviceId        String
+  service          Service        @relation(fields: [serviceId], references: [id])
+  customPrice      Float?
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([partnerProfileId, serviceId])
+}
+
+model Booking {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation("UserBookings", fields: [userId], references: [id])
+  partnerProfileId String
+  partnerProfile   PartnerProfile @relation("PartnerBookings", fields: [partnerProfileId], references: [id])
+  serviceId        String
+  service          Service        @relation(fields: [serviceId], references: [id])
+
+  // Location info
+  addressId       String
+  address         Address @relation(fields: [addressId], references: [id])
+  addressSnapshot String?
+  latitude        Float
+  longitude       Float
+
+  // Timeline & Status
+  status        BookingStatus @default(PENDING)
+  scheduledDate DateTime
+  startedAt     DateTime?
+  completedAt   DateTime?
+  cancelReason  String?
+  expiresAt     DateTime?
+
+  totalAmount Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  payment Payment?
+  review  Review?
+
+  @@index([userId])
+  @@index([partnerProfileId])
+  @@index([status])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  bookingId      String        @unique
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  amount         Float
+  platformFee    Float
+  partnerEarning Float
+  status         PaymentStatus @default(INITIATED)
+  transactionId  String?       // legacy / fallback
+
+  // Razorpay specific fields
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String? @unique
+  razorpaySignature String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
+}
+
+model Review {
+  id               String         @id @default(uuid())
+  bookingId        String         @unique
+  booking          Booking        @relation(fields: [bookingId], references: [id])
+  userId           String
+  user             User           @relation("UserReviews", fields: [userId], references: [id])
+  partnerProfileId String
+  partnerProfile   PartnerProfile @relation("PartnerReviews", fields: [partnerProfileId], references: [id])
+  rating           Int // Constrained logically to 1-5
+  comment          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Availability {
+  id               String         @id @default(uuid())
+  partnerProfileId String
+  partnerProfile   PartnerProfile @relation(fields: [partnerProfileId], references: [id])
+  dayOfWeek        Int // 0 = Sunday, 1 = Monday, etc.
+  startTime        String // Format "HH:mm"
+  endTime          String // Format "HH:mm"
+  isAvailable      Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([partnerProfileId, dayOfWeek])
+}
+
+model PartnerLocation {
+  id               String         @id @default(uuid())
+  partnerProfileId String         @unique
+  partnerProfile   PartnerProfile @relation(fields: [partnerProfileId], references: [id])
+  latitude         Float
+  longitude        Float
+  addressText      String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([latitude, longitude])
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0",
+    "module": "Node16",
+    "moduleResolution": "Node16"
+  },
+  "include": ["src/**/*"]
+}

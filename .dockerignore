@@ -1,0 +1,69 @@
+# Docker build context files to exclude
+
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# Node
+node_modules
+npm-debug.log
+npm-error.log
+yarn-error.log
+pnpm-debug.log
+
+# Build artifacts
+dist
+build
+.next
+.nuxt
+.cache
+.turbo
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Documentation
+README.md
+docs
+.github
+
+# Tests
+jest.config.js
+**/*.test.ts
+**/*.spec.ts
+__tests__
+test
+tests
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Misc
+*.md
+LICENSE
+.editorconfig
+.prettierrc
+.eslintrc.*
+tsconfig.json
+
+# Logs
+logs
+*.log
