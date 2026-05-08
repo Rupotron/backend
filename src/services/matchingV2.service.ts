@@ -81,7 +81,7 @@ export const syncPartnerMetrics = async (partnerId: string) => {
       ? (partner.completedJobs / partner.totalJobs) 
       : 0;
 
-    const metrics = {
+    const metricsData = {
       rating: String(partner.rating || 4.5),
       completionRate: String(completionRate),
       totalJobs: String(partner.totalJobs),
@@ -91,7 +91,7 @@ export const syncPartnerMetrics = async (partnerId: string) => {
 
     await pubClient.hset(
       `${METRICS_PREFIX}${partnerId}`,
-      metrics
+      metricsData
     );
 
     // Set TTL
@@ -181,19 +181,25 @@ const getNearbyPartners = async (
   }
 
   try {
-    // Use GEOSEARCH to find partners within radius
-    const partners = await pubClient.geosearch(
+    const result = await pubClient.georadius(
       GEO_KEY,
-      'FROMMEMBER',
-      'dummy', // We'll use FROMLONLAT instead
-      'BYRADIUS',
+      longitude,
+      latitude,
       radiusKm,
-      'km'
+      'km',
+      'WITHDIST'
     );
 
-    // Actually use GEOSEARCHSTORE or direct query
-    // ioredis might have different API, let's use GEORADIUS
-   /**
+    return result.map((item: any) => 
+      Array.isArray(item) ? item[0] : item
+    );
+  } catch (error) {
+    console.error('[Matching] GEORADIUS failed:', error);
+    return [];
+  }
+};
+
+/**
  * Get partners with dynamically expanding radius
  */
 const getNearbyPartnersWithExpansion = async (
@@ -208,7 +214,7 @@ const getNearbyPartnersWithExpansion = async (
     if (allPartners.size >= minResults) break;
 
     try {
-      // Use proper Redis command
+      // Use proper Redis command without syntax errors
       const partners = await pubClient!.georadius(
         GEO_KEY,
         longitude,
@@ -217,25 +223,6 @@ const getNearbyPartnersWithExpansion = async (
         'km',
         'WITHDIST'
       );
-
-      for (const item of partners) {
-        const [partnerId, distance] = Array.isArray(item)
-          ? [item[0], parseFloat(item[1])]
-          : [item, 0];
-
-        if (!allPartners.has(partnerId)) {
-          allPartners.set(partnerId, distance);
-        }
-      }
-    } catch (error) {
-      console.error(`[Matching] GEORADIUS at ${radius}km failed:`, error);
-    }
-  }
-
-  return Array.from(allPartners.entries())
-    .map(([id, distance]) => ({ id, distance }))
-    .sort((a, b) => a.distance - b.distance);
-};
 
       for (const item of partners) {
         const [partnerId, distance] = Array.isArray(item)
