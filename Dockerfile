@@ -10,7 +10,7 @@ COPY package*.json ./
 
 # CRITICAL FIX: Install ALL dependencies here (including TypeScript). 
 # Do not use --omit=dev in the builder stage.
-RUN npm ci
+RUN npm install
 
 # Copy source code and Prisma schema
 COPY . .
@@ -35,7 +35,7 @@ RUN apk add --no-cache tini curl openssl
 COPY package*.json ./
 
 # Install ONLY production dependencies to keep the final image tiny and secure
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy the compiled code from the builder stage
 COPY --from=builder /app/dist ./dist
