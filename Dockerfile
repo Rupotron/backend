@@ -5,6 +5,9 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
+# CRITICAL FIX: Install OpenSSL so Prisma can generate the client on Alpine
+RUN apk add --no-cache openssl
+
 # Copy package files
 COPY package*.json ./
 
