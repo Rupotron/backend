@@ -225,7 +225,9 @@ const getNearbyPartnersWithExpansion = async (
   for (const radius of radii) {
     if (allPartners.size >= minResults) break;
 
-    try {
+// @ts-ignore
+const result = await redis.georadiusbymember_withcoord(...);    
+try {
       const result = await pubClient!.georadiusbymember_withcoord(
         GEO_KEY,
         '', // This won't work, need different approach
