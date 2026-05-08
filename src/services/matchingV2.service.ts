@@ -193,25 +193,7 @@ const getNearbyPartners = async (
 
     // Actually use GEOSEARCHSTORE or direct query
     // ioredis might have different API, let's use GEORADIUS
-    const result = await pubClient.georadius(
-      GEO_KEY,
-      longitude,
-      latitude,
-      radiusKm,
-      'km',
-      'WITHDIST'
-    );
-
-    return result.map((item: any) => 
-      Array.isArray(item) ? item[0] : item
-    );
-  } catch (error) {
-    console.error('[Matching] GEORADIUS failed:', error);
-    return [];
-  }
-};
-
-/**
+   /**
  * Get partners with dynamically expanding radius
  */
 const getNearbyPartnersWithExpansion = async (
@@ -225,18 +207,8 @@ const getNearbyPartnersWithExpansion = async (
   for (const radius of radii) {
     if (allPartners.size >= minResults) break;
 
-// @ts-ignore
-const result = await redis.georadiusbymember_withcoord(...);    
-try {
-      const result = await pubClient!.georadiusbymember_withcoord(
-        GEO_KEY,
-        '', // This won't work, need different approach
-        radius,
-        'km',
-        'WITHDIST'
-      );
-
-      // Actually use proper Redis command
+    try {
+      // Use proper Redis command
       const partners = await pubClient!.georadius(
         GEO_KEY,
         longitude,
@@ -245,6 +217,25 @@ try {
         'km',
         'WITHDIST'
       );
+
+      for (const item of partners) {
+        const [partnerId, distance] = Array.isArray(item)
+          ? [item[0], parseFloat(item[1])]
+          : [item, 0];
+
+        if (!allPartners.has(partnerId)) {
+          allPartners.set(partnerId, distance);
+        }
+      }
+    } catch (error) {
+      console.error(`[Matching] GEORADIUS at ${radius}km failed:`, error);
+    }
+  }
+
+  return Array.from(allPartners.entries())
+    .map(([id, distance]) => ({ id, distance }))
+    .sort((a, b) => a.distance - b.distance);
+};
 
       for (const item of partners) {
         const [partnerId, distance] = Array.isArray(item)
