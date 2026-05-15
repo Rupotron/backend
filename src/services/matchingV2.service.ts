@@ -81,7 +81,7 @@ export const syncPartnerMetrics = async (partnerId: string) => {
       ? (partner.completedJobs / partner.totalJobs) 
       : 0;
 
-    const metrics = {
+    const metricsData = {
       rating: String(partner.rating || 4.5),
       completionRate: String(completionRate),
       totalJobs: String(partner.totalJobs),
@@ -91,7 +91,7 @@ export const syncPartnerMetrics = async (partnerId: string) => {
 
     await pubClient.hset(
       `${METRICS_PREFIX}${partnerId}`,
-      metrics
+      metricsData
     );
 
     // Set TTL
@@ -181,18 +181,6 @@ const getNearbyPartners = async (
   }
 
   try {
-    // Use GEOSEARCH to find partners within radius
-    const partners = await pubClient.geosearch(
-      GEO_KEY,
-      'FROMMEMBER',
-      'dummy', // We'll use FROMLONLAT instead
-      'BYRADIUS',
-      radiusKm,
-      'km'
-    );
-
-    // Actually use GEOSEARCHSTORE or direct query
-    // ioredis might have different API, let's use GEORADIUS
     const result = await pubClient.georadius(
       GEO_KEY,
       longitude,
@@ -226,15 +214,7 @@ const getNearbyPartnersWithExpansion = async (
     if (allPartners.size >= minResults) break;
 
     try {
-      const result = await pubClient!.georadiusbymember_withcoord(
-        GEO_KEY,
-        '', // This won't work, need different approach
-        radius,
-        'km',
-        'WITHDIST'
-      );
-
-      // Actually use proper Redis command
+      // Use proper Redis command without syntax errors
       const partners = await pubClient!.georadius(
         GEO_KEY,
         longitude,

@@ -5,9 +5,9 @@
  * Usage: npm run init:geo-matching
  */
 
-import { connectRedis, getRedisClient, isRedisConnected } from './config/redis';
-import { prisma } from './config/prisma';
-import { initializeGeoIndex, clearGeoData, getGeoStats } from './utils/redisGeo';
+import { pubClient as redis, connectRedis } from '../config/redis';
+import { prisma } from '../config/prisma';
+import * as redisGeo from '../utils/redisGeo';
 
 const main = async () => {
   try {
