@@ -84,6 +84,14 @@ export const requestValidation = (req: Request, res: Response, next: NextFunctio
 };
 
 /**
+ * Security audit logging middleware
+ */
+export const securityAuditLog = (req: Request, res: Response, next: NextFunction) => {
+  // Simple placeholder for security audit logging
+  next();
+};
+
+/**
  * HTTPS redirect middleware
  */
 export const httpsRedirect = (req: Request, res: Response, next: NextFunction) => {
