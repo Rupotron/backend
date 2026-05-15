@@ -7,7 +7,7 @@
 
 import { pubClient as redis, connectRedis } from '../config/redis';
 import { prisma } from '../config/prisma';
-import * as redisGeo from '../utils/redisGeo';
+import { clearGeoData, initializeGeoIndex, getGeoStats } from '../utils/redisGeo';
 
 const main = async () => {
   try {

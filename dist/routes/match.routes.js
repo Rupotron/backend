@@ -40,6 +40,19 @@ const auth_middleware_1 = require("../middlewares/auth.middleware");
 const match_validator_1 = require("../validators/match.validator");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authMiddleware);
+// Original matching endpoint
 // POST /api/v1/match
 router.post('/', (0, validate_middleware_1.validate)(match_validator_1.matchServiceSchema), matchController.matchPartners);
+// V2 Redis-based matching endpoint
+// POST /api/v1/match/v2
+router.post('/v2', (0, validate_middleware_1.validate)(match_validator_1.matchServiceSchema), matchController.matchPartnersV2);
+// Update partner location (called by partner app)
+// POST /api/v1/match/location
+router.post('/location', matchController.updatePartnerLocation);
+// Sync partner metrics to Redis
+// POST /api/v1/match/sync-metrics
+router.post('/sync-metrics', matchController.syncPartnerMetrics);
+// Get matching system metrics (admin only, no auth check for now)
+// GET /api/v1/match/metrics
+router.get('/metrics', matchController.getMatchingMetrics);
 exports.default = router;

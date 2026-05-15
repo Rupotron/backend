@@ -13,8 +13,9 @@ var LogLevel;
     LogLevel["DEBUG"] = "DEBUG";
 })(LogLevel || (exports.LogLevel = LogLevel = {}));
 class Logger {
+    logLevel;
+    service = 'backend';
     constructor(logLevel = process.env.LOG_LEVEL || 'info') {
-        this.service = 'backend';
         this.logLevel = this.parseLogLevel(logLevel.toUpperCase());
     }
     parseLogLevel(level) {
