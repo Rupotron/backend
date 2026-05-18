@@ -2,13 +2,14 @@ import { prisma } from '../config/prisma';
 
 export const getAllCategories = async () => {
   return prisma.serviceCategory.findMany({
+    where: { isActive: true },
     include: {
       services: {
         where: { isActive: true, isDeleted: false },
-        orderBy: { name: 'asc' }
+        orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }]
       }
     },
-    orderBy: { name: 'asc' }
+    orderBy: { displayOrder: 'asc' }
   });
 };
 
@@ -19,7 +20,10 @@ export const getServicesByCategory = async (categoryId: string) => {
       isActive: true,
       isDeleted: false
     },
-    orderBy: { name: 'asc' }
+    include: {
+      category: true
+    },
+    orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }]
   });
 };
 
