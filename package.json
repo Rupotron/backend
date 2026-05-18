@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "prisma db seed",
+    "db:deploy": "prisma migrate deploy && prisma db seed",
     "init:geo-matching": "ts-node src/scripts/init-geo-matching.ts"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.39",
     "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }
