@@ -11,6 +11,11 @@ export const login = async (req: Request, res: Response) => {
   res.status(200).json(result);
 };
 
+export const google = async (req: Request, res: Response) => {
+  const result = await authService.loginWithGoogle(req.body.idToken);
+  res.status(200).json(result);
+};
+
 export const sendOtp = async (req: Request, res: Response) => {
   const result = await authService.sendOtp(req.body.phone);
   res.status(200).json(result);

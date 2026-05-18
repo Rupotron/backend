@@ -15,6 +15,10 @@ export const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(20, 'Google sign-in token is required')
+});
+
 export const sendOtpSchema = z.object({
   phone: phoneSchema
 });

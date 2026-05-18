@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { generateToken } from '../utils/jwt.util';
+import { env } from '../config/env';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
@@ -10,6 +11,41 @@ const MAX_OTP_ATTEMPTS = 5;
 const otpStore = new Map<string, { otp: string; expiresAt: Date; attempts: number }>();
 
 const generateOtp = () => crypto.randomInt(1000, 10000).toString();
+
+type GoogleTokenInfo = {
+  aud?: string;
+  email?: string;
+  email_verified?: string | boolean;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
+  sub?: string;
+  error?: string;
+  error_description?: string;
+};
+
+const buildAuthResponse = (user: {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  role: string;
+}) => {
+  const token = generateToken({ userId: user.id, role: user.role });
+
+  return {
+    token,
+    user: {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+    },
+  };
+};
 
 export const sendOtp = async (phone: string) => {
   const otp = generateOtp();
@@ -60,19 +96,7 @@ export const verifyOtp = async (phone: string, otp: string) => {
     });
   }
 
-  const token = generateToken({ userId: user.id, role: user.role });
-
-  return {
-    token,
-    user: {
-      userId: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      role: user.role,
-    },
-  };
+  return buildAuthResponse(user);
 };
 
 export const registerUser = async (data: any) => {
@@ -84,8 +108,7 @@ export const registerUser = async (data: any) => {
     data: { email: data.email, passwordHash, firstName: data.firstName, lastName: data.lastName, phone: data.phone },
   });
 
-  const token = generateToken({ userId: user.id, role: user.role });
-  return { token, user: { userId: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } };
+  return buildAuthResponse(user);
 };
 
 export const loginUser = async (data: any) => {
@@ -95,6 +118,57 @@ export const loginUser = async (data: any) => {
   const isMatch = await bcrypt.compare(data.password, user.passwordHash);
   if (!isMatch) throw { statusCode: 401, message: 'Invalid credentials' };
 
-  const token = generateToken({ userId: user.id, role: user.role });
-  return { token, user: { userId: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } };
+  return buildAuthResponse(user);
+};
+
+export const loginWithGoogle = async (idToken: string) => {
+  if (!env.googleClientId) {
+    throw { statusCode: 503, message: 'Google sign-in is not configured yet' };
+  }
+
+  const response = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
+  );
+
+  if (!response.ok) {
+    throw { statusCode: 401, message: 'Invalid Google sign-in token' };
+  }
+
+  const profile = (await response.json()) as GoogleTokenInfo;
+
+  if (profile.error) {
+    throw { statusCode: 401, message: profile.error_description ?? 'Invalid Google sign-in token' };
+  }
+
+  if (profile.aud !== env.googleClientId) {
+    throw { statusCode: 401, message: 'Google sign-in token was issued for a different app' };
+  }
+
+  if (!profile.email || profile.email_verified !== true && profile.email_verified !== 'true') {
+    throw { statusCode: 401, message: 'Google account email is not verified' };
+  }
+
+  const email = profile.email.toLowerCase();
+  const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shom';
+  const lastName = profile.family_name || profile.name?.split(' ').slice(1).join(' ') || 'User';
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+
+  if (existingUser?.isDeleted) {
+    throw { statusCode: 403, message: 'This account is not active' };
+  }
+
+  const user =
+    existingUser ??
+    (await prisma.user.create({
+      data: {
+        email,
+        passwordHash: await bcrypt.hash(`google:${profile.sub ?? crypto.randomUUID()}:${crypto.randomUUID()}`, 10),
+        firstName,
+        lastName,
+        role: 'USER',
+      },
+    }));
+
+  return buildAuthResponse(user);
 };
