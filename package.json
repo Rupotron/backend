@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "prisma db seed",
+    "seed:with-migration": "ts-node prisma/seed-with-migration.ts",
     "db:deploy": "prisma migrate deploy && prisma db seed",
     "init:geo-matching": "ts-node src/scripts/init-geo-matching.ts"
   },
