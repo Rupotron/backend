@@ -41,6 +41,7 @@ const router = (0, express_1.Router)();
 // Email/password (admin/partner)
 router.post('/register', (0, validate_middleware_1.validate)(auth_validator_1.registerSchema), authController.register);
 router.post('/login', (0, validate_middleware_1.validate)(auth_validator_1.loginSchema), authController.login);
+router.post('/google', (0, validate_middleware_1.validate)(auth_validator_1.googleAuthSchema), authController.google);
 // Phone OTP (user app)
 router.post('/send-otp', (0, validate_middleware_1.validate)(auth_validator_1.sendOtpSchema), authController.sendOtp);
 router.post('/verify-otp', (0, validate_middleware_1.validate)(auth_validator_1.verifyOtpSchema), authController.verifyOtp);

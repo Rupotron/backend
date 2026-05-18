@@ -3,16 +3,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.registerUser = exports.verifyOtp = exports.sendOtp = void 0;
+exports.loginWithGoogle = exports.loginUser = exports.registerUser = exports.verifyOtp = exports.sendOtp = void 0;
 const prisma_1 = require("../config/prisma");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const jwt_util_1 = require("../utils/jwt.util");
+const env_1 = require("../config/env");
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 // Replace with Redis or an SMS provider verification API before scaling horizontally.
 const otpStore = new Map();
 const generateOtp = () => crypto_1.default.randomInt(1000, 10000).toString();
+const buildAuthResponse = (user) => {
+    const token = (0, jwt_util_1.generateToken)({ userId: user.id, role: user.role });
+    return {
+        token,
+        user: {
+            userId: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            role: user.role,
+        },
+    };
+};
 const sendOtp = async (phone) => {
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
@@ -56,18 +71,7 @@ const verifyOtp = async (phone, otp) => {
             },
         });
     }
-    const token = (0, jwt_util_1.generateToken)({ userId: user.id, role: user.role });
-    return {
-        token,
-        user: {
-            userId: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-        },
-    };
+    return buildAuthResponse(user);
 };
 exports.verifyOtp = verifyOtp;
 const registerUser = async (data) => {
@@ -78,8 +82,7 @@ const registerUser = async (data) => {
     const user = await prisma_1.prisma.user.create({
         data: { email: data.email, passwordHash, firstName: data.firstName, lastName: data.lastName, phone: data.phone },
     });
-    const token = (0, jwt_util_1.generateToken)({ userId: user.id, role: user.role });
-    return { token, user: { userId: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } };
+    return buildAuthResponse(user);
 };
 exports.registerUser = registerUser;
 const loginUser = async (data) => {
@@ -89,7 +92,44 @@ const loginUser = async (data) => {
     const isMatch = await bcryptjs_1.default.compare(data.password, user.passwordHash);
     if (!isMatch)
         throw { statusCode: 401, message: 'Invalid credentials' };
-    const token = (0, jwt_util_1.generateToken)({ userId: user.id, role: user.role });
-    return { token, user: { userId: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } };
+    return buildAuthResponse(user);
 };
 exports.loginUser = loginUser;
+const loginWithGoogle = async (idToken) => {
+    if (!env_1.env.googleClientId) {
+        throw { statusCode: 503, message: 'Google sign-in is not configured yet' };
+    }
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+    if (!response.ok) {
+        throw { statusCode: 401, message: 'Invalid Google sign-in token' };
+    }
+    const profile = (await response.json());
+    if (profile.error) {
+        throw { statusCode: 401, message: profile.error_description ?? 'Invalid Google sign-in token' };
+    }
+    if (profile.aud !== env_1.env.googleClientId) {
+        throw { statusCode: 401, message: 'Google sign-in token was issued for a different app' };
+    }
+    if (!profile.email || profile.email_verified !== true && profile.email_verified !== 'true') {
+        throw { statusCode: 401, message: 'Google account email is not verified' };
+    }
+    const email = profile.email.toLowerCase();
+    const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shom';
+    const lastName = profile.family_name || profile.name?.split(' ').slice(1).join(' ') || 'User';
+    const existingUser = await prisma_1.prisma.user.findUnique({ where: { email } });
+    if (existingUser?.isDeleted) {
+        throw { statusCode: 403, message: 'This account is not active' };
+    }
+    const user = existingUser ??
+        (await prisma_1.prisma.user.create({
+            data: {
+                email,
+                passwordHash: await bcryptjs_1.default.hash(`google:${profile.sub ?? crypto_1.default.randomUUID()}:${crypto_1.default.randomUUID()}`, 10),
+                firstName,
+                lastName,
+                role: 'USER',
+            },
+        }));
+    return buildAuthResponse(user);
+};
+exports.loginWithGoogle = loginWithGoogle;

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyOtp = exports.sendOtp = exports.login = exports.register = void 0;
+exports.verifyOtp = exports.sendOtp = exports.google = exports.login = exports.register = void 0;
 const authService = __importStar(require("../services/auth.service"));
 const register = async (req, res) => {
     const result = await authService.registerUser(req.body);
@@ -45,6 +45,11 @@ const login = async (req, res) => {
     res.status(200).json(result);
 };
 exports.login = login;
+const google = async (req, res) => {
+    const result = await authService.loginWithGoogle(req.body.idToken);
+    res.status(200).json(result);
+};
+exports.google = google;
 const sendOtp = async (req, res) => {
     const result = await authService.sendOtp(req.body.phone);
     res.status(200).json(result);
