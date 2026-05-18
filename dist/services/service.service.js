@@ -4,13 +4,14 @@ exports.getServiceDetails = exports.getServicesByCategory = exports.getAllCatego
 const prisma_1 = require("../config/prisma");
 const getAllCategories = async () => {
     return prisma_1.prisma.serviceCategory.findMany({
+        where: { isActive: true },
         include: {
             services: {
                 where: { isActive: true, isDeleted: false },
-                orderBy: { name: 'asc' }
+                orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }]
             }
         },
-        orderBy: { name: 'asc' }
+        orderBy: { displayOrder: 'asc' }
     });
 };
 exports.getAllCategories = getAllCategories;
@@ -21,7 +22,10 @@ const getServicesByCategory = async (categoryId) => {
             isActive: true,
             isDeleted: false
         },
-        orderBy: { name: 'asc' }
+        include: {
+            category: true
+        },
+        orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }]
     });
 };
 exports.getServicesByCategory = getServicesByCategory;

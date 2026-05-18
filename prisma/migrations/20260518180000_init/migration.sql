@@ -62,7 +62,11 @@ CREATE TABLE "PartnerProfile" (
 CREATE TABLE "ServiceCategory" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
     "description" TEXT,
+    "icon" TEXT,
+    "displayOrder" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -74,9 +78,13 @@ CREATE TABLE "Service" (
     "id" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
     "description" TEXT,
     "basePrice" DOUBLE PRECISION NOT NULL,
     "durationMinutes" INTEGER NOT NULL,
+    "icon" TEXT,
+    "isPopular" BOOLEAN NOT NULL DEFAULT false,
+    "displayOrder" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -188,6 +196,12 @@ CREATE UNIQUE INDEX "PartnerProfile_userId_key" ON "PartnerProfile"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ServiceCategory_name_key" ON "ServiceCategory"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ServiceCategory_slug_key" ON "ServiceCategory"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Service_slug_key" ON "Service"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PartnerService_partnerProfileId_serviceId_key" ON "PartnerService"("partnerProfileId", "serviceId");
