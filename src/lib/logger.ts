@@ -28,6 +28,13 @@ interface LogEntry {
   [key: string]: any;
 }
 
+const sanitizeMetadata = (entry: LogEntry) => {
+  const { timestamp, level, message, service, ...metadata } = entry;
+  return Object.fromEntries(
+    Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  );
+};
+
 class Logger {
   private logLevel: LogLevel;
   private service: string = 'backend';
@@ -50,7 +57,13 @@ class Logger {
     if (process.env.LOG_FORMAT === 'json') {
       return JSON.stringify(entry);
     }
-    return `[${entry.timestamp}] [${entry.level}] ${entry.message}`;
+
+    const metadata = sanitizeMetadata(entry);
+    const details = Object.keys(metadata).length > 0
+      ? ` ${JSON.stringify(metadata)}`
+      : '';
+
+    return `[${entry.timestamp}] [${entry.level}] ${entry.message}${details}`;
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -170,7 +183,7 @@ export const httpLogger = (req: Request, res: Response, next: NextFunction) => {
  * Error logging middleware
  */
 export const errorLogger = (
-  error: Error,
+  error: Error & { status?: number; statusCode?: number; code?: string },
   req: Request,
   res: Response,
   next: NextFunction
@@ -182,6 +195,8 @@ export const errorLogger = (
     method: req.method,
     path: req.path,
     ip: req.ip,
+    statusCode: error.statusCode || error.status || 500,
+    code: error.code,
   });
 
   next();

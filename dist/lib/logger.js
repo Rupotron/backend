@@ -12,6 +12,10 @@ var LogLevel;
     LogLevel["INFO"] = "INFO";
     LogLevel["DEBUG"] = "DEBUG";
 })(LogLevel || (exports.LogLevel = LogLevel = {}));
+const sanitizeMetadata = (entry) => {
+    const { timestamp, level, message, service, ...metadata } = entry;
+    return Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+};
 class Logger {
     logLevel;
     service = 'backend';
@@ -31,7 +35,11 @@ class Logger {
         if (process.env.LOG_FORMAT === 'json') {
             return JSON.stringify(entry);
         }
-        return `[${entry.timestamp}] [${entry.level}] ${entry.message}`;
+        const metadata = sanitizeMetadata(entry);
+        const details = Object.keys(metadata).length > 0
+            ? ` ${JSON.stringify(metadata)}`
+            : '';
+        return `[${entry.timestamp}] [${entry.level}] ${entry.message}${details}`;
     }
     shouldLog(level) {
         const levels = [LogLevel.ERROR, LogLevel.WARN, LogLevel.INFO, LogLevel.DEBUG];
@@ -140,6 +148,8 @@ const errorLogger = (error, req, res, next) => {
         method: req.method,
         path: req.path,
         ip: req.ip,
+        statusCode: error.statusCode || error.status || 500,
+        code: error.code,
     });
     next();
 };

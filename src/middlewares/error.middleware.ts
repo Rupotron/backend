@@ -9,8 +9,15 @@ type AppError = Error & {
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-export const errorHandler = (err: AppError, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('[Error]:', err?.message || err);
+export const errorHandler = (err: AppError, req: Request, res: Response, _next: NextFunction) => {
+  console.error('[Error]:', {
+    message: err?.message || String(err),
+    method: req.method,
+    path: req.originalUrl,
+    statusCode: err.statusCode || err.status || 500,
+    code: err.code,
+    stack: err.stack,
+  });
 
   if (res.headersSent) return;
 
