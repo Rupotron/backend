@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { Role } from '@prisma/client';
 import { generateToken } from '../utils/jwt.util';
 import { env } from '../config/env';
 
@@ -30,7 +31,7 @@ const buildAuthResponse = (user: {
   firstName: string;
   lastName: string;
   phone?: string | null;
-  role: string;
+  role: Role;
 }) => {
   const token = generateToken({ userId: user.id, role: user.role });
 
