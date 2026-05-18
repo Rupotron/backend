@@ -1,5 +1,11 @@
 import { prisma } from '../config/prisma';
 
+type ServiceListFilters = {
+  categorySlug?: string;
+  popular?: boolean;
+  search?: string;
+};
+
 export const getAllCategories = async () => {
   return prisma.serviceCategory.findMany({
     where: { isActive: true },
@@ -24,6 +30,36 @@ export const getServicesByCategory = async (categoryId: string) => {
       category: true
     },
     orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }]
+  });
+};
+
+export const getAllServices = async (filters: ServiceListFilters = {}) => {
+  return prisma.service.findMany({
+    where: {
+      isActive: true,
+      isDeleted: false,
+      ...(filters.popular ? { isPopular: true } : {}),
+      ...(filters.search
+        ? {
+            OR: [
+              { name: { contains: filters.search, mode: 'insensitive' } },
+              { description: { contains: filters.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(filters.categorySlug
+        ? {
+            category: {
+              slug: filters.categorySlug,
+              isActive: true,
+            },
+          }
+        : {}),
+    },
+    include: {
+      category: true,
+    },
+    orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }, { name: 'asc' }],
   });
 };
 
