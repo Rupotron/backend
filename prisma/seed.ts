@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -885,6 +886,37 @@ async function main() {
   console.log("[SEED] Starting seeding with professional service catalog...");
 
   try {
+    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (adminEmail && adminPassword) {
+      if (adminPassword.length < 8) {
+        throw new Error("ADMIN_PASSWORD must be at least 8 characters long.");
+      }
+
+      await prisma.user.upsert({
+        where: { email: adminEmail },
+        update: {
+          firstName: process.env.ADMIN_FIRST_NAME || "Shom",
+          lastName: process.env.ADMIN_LAST_NAME || "Admin",
+          passwordHash: await bcrypt.hash(adminPassword, 10),
+          role: "ADMIN",
+          isDeleted: false,
+        },
+        create: {
+          email: adminEmail,
+          passwordHash: await bcrypt.hash(adminPassword, 10),
+          firstName: process.env.ADMIN_FIRST_NAME || "Shom",
+          lastName: process.env.ADMIN_LAST_NAME || "Admin",
+          role: "ADMIN",
+        },
+      });
+
+      console.log(`[SEED] Admin account ready: ${adminEmail}`);
+    } else {
+      console.log("[SEED] ADMIN_EMAIL/ADMIN_PASSWORD not set; skipping admin account seed.");
+    }
+
     // Seed categories
     console.log("[SEED] Seeding service categories...");
     const categoryMap: { [key: string]: string } = {};
