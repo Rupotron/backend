@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as matchService from '../services/match.service';
 import * as matchingV2Service from '../services/matchingV2.service';
 import { isRedisConnected } from '../config/redis';
+import { prisma } from '../config/prisma';
 
 export const matchPartners = async (req: Request, res: Response) => {
   const { serviceId, latitude, longitude, radius } = req.body;
@@ -54,17 +55,27 @@ export const matchPartnersV2 = async (req: Request, res: Response) => {
  * Update partner location in Redis
  */
 export const updatePartnerLocation = async (req: Request, res: Response) => {
-  const { partnerId, latitude, longitude, isOnline } = req.body;
+  const { latitude, longitude, isOnline } = req.body;
 
-  if (!partnerId || latitude === undefined || longitude === undefined) {
+  if (latitude === undefined || longitude === undefined) {
     return res.status(400).json({
-      message: 'Missing required fields: partnerId, latitude, longitude',
+      message: 'Missing required fields: latitude, longitude',
     });
   }
 
   try {
+    const partner = await prisma.partnerProfile.findUnique({
+      where: { userId: req.user!.userId },
+      select: { id: true },
+    });
+
+    if (!partner) {
+      res.status(404).json({ message: 'Partner profile not found' });
+      return;
+    }
+
     await matchingV2Service.updatePartnerLocation(
-      partnerId,
+      partner.id,
       latitude,
       longitude,
       isOnline !== false

@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as matchController from '../controllers/match.controller';
 import { validate } from '../middlewares/validate.middleware';
-import { authMiddleware } from '../middlewares/auth.middleware';
-import { matchServiceSchema } from '../validators/match.validator';
+import { authMiddleware, authorizeRole } from '../middlewares/auth.middleware';
+import { matchServiceSchema, partnerLocationSchema, syncPartnerMetricsSchema } from '../validators/match.validator';
 
 const router = Router();
 
@@ -18,14 +18,13 @@ router.post('/v2', validate(matchServiceSchema), matchController.matchPartnersV2
 
 // Update partner location (called by partner app)
 // POST /api/v1/match/location
-router.post('/location', matchController.updatePartnerLocation);
+router.post('/location', authorizeRole(['PARTNER']), validate(partnerLocationSchema), matchController.updatePartnerLocation);
 
 // Sync partner metrics to Redis
 // POST /api/v1/match/sync-metrics
-router.post('/sync-metrics', matchController.syncPartnerMetrics);
+router.post('/sync-metrics', authorizeRole(['ADMIN']), validate(syncPartnerMetricsSchema), matchController.syncPartnerMetrics);
 
-// Get matching system metrics (admin only, no auth check for now)
 // GET /api/v1/match/metrics
-router.get('/metrics', matchController.getMatchingMetrics);
+router.get('/metrics', authorizeRole(['ADMIN']), matchController.getMatchingMetrics);
 
 export default router;

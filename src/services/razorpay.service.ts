@@ -6,11 +6,19 @@
  */
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { getRequiredEnv } from '../config/env';
 
-const rzp = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!
-});
+let rzp: Razorpay | null = null;
+
+const getRazorpay = () => {
+  if (!rzp) {
+    rzp = new Razorpay({
+      key_id: getRequiredEnv('razorpayKeyId'),
+      key_secret: getRequiredEnv('razorpayKeySecret'),
+    });
+  }
+  return rzp;
+};
 
 /**
  * Create a Razorpay order.
@@ -18,12 +26,12 @@ const rzp = new Razorpay({
  * @param receiptId - internal booking ID used as receipt reference
  */
 export const createOrder = async (amountInPaise: number, receiptId: string) => {
-  return rzp.orders.create({
+  return getRazorpay().orders.create({
     amount: amountInPaise,
     currency: 'INR',
     receipt: receiptId,
     payment_capture: true
-  } as any);
+  });
 };
 
 /**
@@ -31,14 +39,17 @@ export const createOrder = async (amountInPaise: number, receiptId: string) => {
  * CRITICAL: Must use the raw request body buffer — NOT parsed JSON.
  */
 export const verifyWebhookSignature = (rawBody: Buffer, signature: string): boolean => {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
+  const secret = getRequiredEnv('razorpayWebhookSecret');
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(rawBody)
     .digest('hex');
+  const provided = Buffer.from(signature, 'hex');
+  const expected = Buffer.from(expectedSignature, 'hex');
+  if (provided.length !== expected.length) return false;
   return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature, 'hex'),
-    Buffer.from(signature, 'hex')
+    expected,
+    provided
   );
 };
 
@@ -50,14 +61,17 @@ export const verifyPaymentSignature = (
   paymentId: string,
   signature: string
 ): boolean => {
-  const secret = process.env.RAZORPAY_KEY_SECRET!;
+  const secret = getRequiredEnv('razorpayKeySecret');
   const body = `${orderId}|${paymentId}`;
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(body)
     .digest('hex');
+  const provided = Buffer.from(signature, 'hex');
+  const expected = Buffer.from(expectedSignature, 'hex');
+  if (provided.length !== expected.length) return false;
   return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature, 'hex'),
-    Buffer.from(signature, 'hex')
+    expected,
+    provided
   );
 };

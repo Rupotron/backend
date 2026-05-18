@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { TokenPayload } from '../utils/jwt.util';
 import { Role } from '@prisma/client';
+import { verifyToken } from '../utils/jwt.util';
 
 declare global {
   namespace Express {
@@ -12,14 +12,14 @@ declare global {
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const [scheme, token] = req.headers.authorization?.split(' ') ?? [];
 
-  if (!token) {
+  if (scheme !== 'Bearer' || !token) {
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as TokenPayload;
+    const decoded = verifyToken(token) as TokenPayload;
     req.user = decoded;
     next();
   } catch (err) {

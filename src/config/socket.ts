@@ -12,6 +12,7 @@ import {
   subClient,
 } from './redis';
 import { verifyToken } from '../utils/jwt.util';
+import { env } from './env';
 
 type SocketAuthData = {
   userId: string;
@@ -141,7 +142,11 @@ const initAdminNamespace = (namespace: Namespace) => {
 
 export const initSocket = async (httpServer: HttpServer) => {
   io = new SocketIOServer(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: {
+      origin: env.isProduction ? env.allowedOrigins : true,
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
   });
 
   const redisReady = await connectRedis();

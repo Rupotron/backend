@@ -48,11 +48,10 @@ router.post('/', (0, validate_middleware_1.validate)(match_validator_1.matchServ
 router.post('/v2', (0, validate_middleware_1.validate)(match_validator_1.matchServiceSchema), matchController.matchPartnersV2);
 // Update partner location (called by partner app)
 // POST /api/v1/match/location
-router.post('/location', matchController.updatePartnerLocation);
+router.post('/location', (0, auth_middleware_1.authorizeRole)(['PARTNER']), (0, validate_middleware_1.validate)(match_validator_1.partnerLocationSchema), matchController.updatePartnerLocation);
 // Sync partner metrics to Redis
 // POST /api/v1/match/sync-metrics
-router.post('/sync-metrics', matchController.syncPartnerMetrics);
-// Get matching system metrics (admin only, no auth check for now)
+router.post('/sync-metrics', (0, auth_middleware_1.authorizeRole)(['ADMIN']), (0, validate_middleware_1.validate)(match_validator_1.syncPartnerMetricsSchema), matchController.syncPartnerMetrics);
 // GET /api/v1/match/metrics
-router.get('/metrics', matchController.getMatchingMetrics);
+router.get('/metrics', (0, auth_middleware_1.authorizeRole)(['ADMIN']), matchController.getMatchingMetrics);
 exports.default = router;

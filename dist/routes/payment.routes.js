@@ -39,15 +39,7 @@ const validate_middleware_1 = require("../middlewares/validate.middleware");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
 const payment_validator_1 = require("../validators/payment.validator");
 const router = (0, express_1.Router)();
-/**
- * POST /api/v1/payment/webhook
- * ─────────────────────────────
- * MUST be registered BEFORE express.json() on this router.
- * express.raw() preserves the raw Buffer needed for HMAC signature verification.
- * If JSON is parsed first, signature verification will ALWAYS fail.
- */
-router.post('/webhook', (0, express_1.raw)({ type: 'application/json' }), paymentController.handleWebhook);
-// All routes below require authentication
+// Webhook is mounted in src/index.ts before JSON parsing so Razorpay HMAC verification receives the raw body.
 router.use(auth_middleware_1.authMiddleware);
 router.post('/order', (0, validate_middleware_1.validate)(payment_validator_1.createOrderSchema), paymentController.createOrder);
 router.post('/verify', (0, validate_middleware_1.validate)(payment_validator_1.verifyPaymentSchema), paymentController.verifyPayment);

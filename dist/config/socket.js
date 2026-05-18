@@ -6,6 +6,7 @@ const socket_io_1 = require("socket.io");
 const prisma_1 = require("./prisma");
 const redis_1 = require("./redis");
 const jwt_util_1 = require("../utils/jwt.util");
+const env_1 = require("./env");
 let io = null;
 let userNamespace = null;
 let partnerNamespace = null;
@@ -108,7 +109,11 @@ const initAdminNamespace = (namespace) => {
 };
 const initSocket = async (httpServer) => {
     io = new socket_io_1.Server(httpServer, {
-        cors: { origin: '*', methods: ['GET', 'POST'] },
+        cors: {
+            origin: env_1.env.isProduction ? env_1.env.allowedOrigins : true,
+            methods: ['GET', 'POST'],
+            credentials: true,
+        },
     });
     const redisReady = await (0, redis_1.connectRedis)();
     if (redisReady && redis_1.pubClient && redis_1.subClient) {

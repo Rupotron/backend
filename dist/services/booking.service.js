@@ -30,6 +30,9 @@ const createBooking = async (userId, data) => {
         if (!address) {
             throw { statusCode: 400, message: 'Invalid address' };
         }
+        if (address.userId !== userId) {
+            throw { statusCode: 403, message: 'Address does not belong to this user' };
+        }
         // We assume latitude/longitude are stored in Address or passed.
         // For MVP, if they aren't on Address, we mock them.
         // Wait, Address in schema doesn't have lat/long. Let's mock the coords for now,
@@ -78,6 +81,9 @@ const updateBookingStatus = async (userId, role, bookingId, status, cancelReason
             if (!partnerProfile || booking.partnerProfileId !== partnerProfile.id) {
                 throw { statusCode: 403, message: 'Forbidden' };
             }
+        }
+        if (booking.status === 'COMPLETED' || booking.status === 'CANCELLED') {
+            throw { statusCode: 400, message: `Booking is already ${booking.status}` };
         }
         // Role-based restrictions
         if (role === 'USER' && (status === 'CONFIRMED' || status === 'COMPLETED')) {
@@ -218,6 +224,10 @@ const acceptJob = async (userId, bookingId) => {
             throw { statusCode: 400, message: `Cannot accept a ${booking.status} booking` };
         if (booking.expiresAt && new Date() > booking.expiresAt)
             throw { statusCode: 400, message: 'This booking has expired' };
+        const payment = await tx.payment.findUnique({ where: { bookingId } });
+        if (!payment || payment.status !== 'COMPLETED') {
+            throw { statusCode: 402, message: 'Payment must be completed before accepting this job' };
+        }
         const confirmation = await tx.booking.updateMany({
             where: { id: bookingId, status: 'PENDING' },
             data: { status: 'CONFIRMED' }

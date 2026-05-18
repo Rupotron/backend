@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
+import { getJwtSecret } from '../config/env';
 
 export interface TokenPayload {
   userId: string;
@@ -9,11 +10,11 @@ export interface TokenPayload {
 export const generateToken = (payload: TokenPayload): string => {
   return jwt.sign(
     payload,
-    process.env.JWT_SECRET || 'fallback_secret',
+    getJwtSecret(),
     { expiresIn: '7d' }
   );
 };
 
 export const verifyToken = (token: string): TokenPayload => {
-  return jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as TokenPayload;
+  return jwt.verify(token, getJwtSecret()) as TokenPayload;
 };

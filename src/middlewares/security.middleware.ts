@@ -1,4 +1,4 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -28,33 +28,6 @@ export const configureSecurity = (app: Express) => {
 
   app.use('/api/v1/', generalLimiter);
 
-  // CORS Configuration
-  const allowedOrigins = (process.env.CORS_ORIGIN || '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const origin = req.headers.origin;
-
-    // Check if the request's origin is in our allowed list
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Vary', 'Origin');
-
-    // Handle Preflight (OPTIONS) requests immediately
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(204);
-    }
-
-    next();
-  });
-
   // Additional Security Headers
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -73,7 +46,8 @@ export const configureSecurity = (app: Express) => {
  */
 export const requestValidation = (req: Request, res: Response, next: NextFunction) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    if (!req.is('application/json')) {
+    const contentLength = Number(req.headers['content-length'] ?? 0);
+    if (contentLength > 0 && !req.is('application/json')) {
       return res.status(400).json({
         status: 'error',
         message: 'Content-Type must be application/json',

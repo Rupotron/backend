@@ -50,10 +50,6 @@ const verifyPayment = async (req, res) => {
     res.status(200).json(result);
 };
 exports.verifyPayment = verifyPayment;
-/**
- * Webhook — must receive raw body for HMAC to work correctly.
- * Express.raw() is mounted only on this route.
- */
 const handleWebhook = async (req, res) => {
     const signature = req.headers['x-razorpay-signature'];
     if (!signature) {
@@ -64,14 +60,26 @@ const handleWebhook = async (req, res) => {
     const rawBody = req.body;
     const isValid = razorpayService.verifyWebhookSignature(rawBody, signature);
     if (!isValid) {
-        console.error('[Webhook] HMAC signature mismatch — possible spoofing attempt');
+        console.error('[Webhook] HMAC signature mismatch. Possible spoofing attempt.');
         res.status(400).json({ message: 'Invalid webhook signature' });
         return;
     }
-    const payload = JSON.parse(rawBody.toString());
+    let payload;
+    try {
+        payload = JSON.parse(rawBody.toString());
+    }
+    catch {
+        res.status(400).json({ message: 'Invalid webhook payload' });
+        return;
+    }
     const event = payload.event;
-    // Acknowledge Razorpay IMMEDIATELY — then process async
+    if (!event) {
+        res.status(400).json({ message: 'Missing webhook event' });
+        return;
+    }
     res.status(200).json({ received: true });
-    await paymentService.handleWebhookEvent(event, payload);
+    void paymentService.handleWebhookEvent(event, payload).catch((error) => {
+        console.error('[Webhook] Async processing failed', error);
+    });
 };
 exports.handleWebhook = handleWebhook;

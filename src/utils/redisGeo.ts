@@ -52,7 +52,7 @@ export const initializeGeoIndex = async () => {
 
   try {
     // Import here to avoid circular dependency
-    const { prisma } = await import('../config/prisma');
+    const { prisma } = await import('../config/prisma.js');
 
     const partners = await prisma.partnerProfile.findMany({
       where: {

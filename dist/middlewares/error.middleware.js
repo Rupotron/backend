@@ -1,22 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.errorHandler = void 0;
-const errorHandler = (err, req, res, next) => {
+const isProduction = process.env.NODE_ENV === 'production';
+const errorHandler = (err, _req, res, _next) => {
     console.error('[Error]:', err?.message || err);
-    // Prisma: DB connection / unreachable
+    if (res.headersSent)
+        return;
     if (err?.code === 'P1001' || err?.message?.includes("Can't reach database")) {
-        return res.status(503).json({ message: 'Database unavailable. Please try again later.' });
+        res.status(503).json({ message: 'Database unavailable. Please try again later.' });
+        return;
     }
-    // Prisma: record not found
     if (err?.code === 'P2025') {
-        return res.status(404).json({ message: err.meta?.cause || 'Resource not found.' });
+        res.status(404).json({ message: err.meta?.cause || 'Resource not found.' });
+        return;
     }
-    // Prisma: unique constraint violation
     if (err?.code === 'P2002') {
-        return res.status(409).json({ message: 'A record with that value already exists.' });
+        res.status(409).json({ message: 'A record with that value already exists.' });
+        return;
     }
     const statusCode = err.statusCode || err.status || 500;
-    const message = err.message || 'Internal Server Error';
-    res.status(statusCode).json({ message, error: message });
+    const message = statusCode >= 500 && isProduction
+        ? 'Internal Server Error'
+        : err.message || 'Internal Server Error';
+    res.status(statusCode).json({
+        message,
+        ...(isProduction ? {} : { error: err.message, stack: err.stack }),
+    });
 };
 exports.errorHandler = errorHandler;

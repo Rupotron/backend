@@ -5,11 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyToken = exports.generateToken = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const env_1 = require("../config/env");
 const generateToken = (payload) => {
-    return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '7d' });
+    return jsonwebtoken_1.default.sign(payload, (0, env_1.getJwtSecret)(), { expiresIn: '7d' });
 };
 exports.generateToken = generateToken;
 const verifyToken = (token) => {
-    return jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    return jsonwebtoken_1.default.verify(token, (0, env_1.getJwtSecret)());
 };
 exports.verifyToken = verifyToken;

@@ -37,6 +37,7 @@ exports.getMatchingMetrics = exports.syncPartnerMetrics = exports.updatePartnerL
 const matchService = __importStar(require("../services/match.service"));
 const matchingV2Service = __importStar(require("../services/matchingV2.service"));
 const redis_1 = require("../config/redis");
+const prisma_1 = require("../config/prisma");
 const matchPartners = async (req, res) => {
     const { serviceId, latitude, longitude, radius } = req.body;
     console.log(`[Matching Engine] Searching for service ${serviceId} near lat:${latitude}, lon:${longitude}`);
@@ -76,14 +77,22 @@ exports.matchPartnersV2 = matchPartnersV2;
  * Update partner location in Redis
  */
 const updatePartnerLocation = async (req, res) => {
-    const { partnerId, latitude, longitude, isOnline } = req.body;
-    if (!partnerId || latitude === undefined || longitude === undefined) {
+    const { latitude, longitude, isOnline } = req.body;
+    if (latitude === undefined || longitude === undefined) {
         return res.status(400).json({
-            message: 'Missing required fields: partnerId, latitude, longitude',
+            message: 'Missing required fields: latitude, longitude',
         });
     }
     try {
-        await matchingV2Service.updatePartnerLocation(partnerId, latitude, longitude, isOnline !== false);
+        const partner = await prisma_1.prisma.partnerProfile.findUnique({
+            where: { userId: req.user.userId },
+            select: { id: true },
+        });
+        if (!partner) {
+            res.status(404).json({ message: 'Partner profile not found' });
+            return;
+        }
+        await matchingV2Service.updatePartnerLocation(partner.id, latitude, longitude, isOnline !== false);
         res.status(200).json({
             success: true,
             message: 'Partner location updated',
