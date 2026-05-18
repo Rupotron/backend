@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServiceDetails = exports.getServicesByCategory = exports.getCategories = void 0;
+exports.getServiceDetails = exports.getServices = exports.getServicesByCategory = exports.getCategories = void 0;
 const serviceService = __importStar(require("../services/service.service"));
 const getCategories = async (req, res) => {
     const result = await serviceService.getAllCategories();
@@ -46,6 +46,14 @@ const getServicesByCategory = async (req, res) => {
     res.status(200).json(result);
 };
 exports.getServicesByCategory = getServicesByCategory;
+const getServices = async (req, res) => {
+    const categorySlug = typeof req.query.categorySlug === 'string' ? req.query.categorySlug : undefined;
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+    const popular = req.query.popular === 'true';
+    const result = await serviceService.getAllServices({ categorySlug, search, popular });
+    res.status(200).json(result);
+};
+exports.getServices = getServices;
 const getServiceDetails = async (req, res) => {
     const { serviceId } = req.params;
     const result = await serviceService.getServiceDetails(serviceId);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServiceDetails = exports.getServicesByCategory = exports.getAllCategories = void 0;
+exports.getServiceDetails = exports.getAllServices = exports.getServicesByCategory = exports.getAllCategories = void 0;
 const prisma_1 = require("../config/prisma");
 const getAllCategories = async () => {
     return prisma_1.prisma.serviceCategory.findMany({
@@ -29,6 +29,36 @@ const getServicesByCategory = async (categoryId) => {
     });
 };
 exports.getServicesByCategory = getServicesByCategory;
+const getAllServices = async (filters = {}) => {
+    return prisma_1.prisma.service.findMany({
+        where: {
+            isActive: true,
+            isDeleted: false,
+            ...(filters.popular ? { isPopular: true } : {}),
+            ...(filters.search
+                ? {
+                    OR: [
+                        { name: { contains: filters.search, mode: 'insensitive' } },
+                        { description: { contains: filters.search, mode: 'insensitive' } },
+                    ],
+                }
+                : {}),
+            ...(filters.categorySlug
+                ? {
+                    category: {
+                        slug: filters.categorySlug,
+                        isActive: true,
+                    },
+                }
+                : {}),
+        },
+        include: {
+            category: true,
+        },
+        orderBy: [{ isPopular: 'desc' }, { displayOrder: 'asc' }, { name: 'asc' }],
+    });
+};
+exports.getAllServices = getAllServices;
 const getServiceDetails = async (serviceId) => {
     const service = await prisma_1.prisma.service.findUnique({
         where: { id: serviceId, isDeleted: false },
