@@ -37,6 +37,6 @@ const express_1 = require("express");
 const serviceController = __importStar(require("../controllers/service.controller"));
 const router = (0, express_1.Router)();
 router.get('/categories', serviceController.getCategories);
-router.get('/:categoryId', serviceController.getServicesByCategory);
 router.get('/details/:serviceId', serviceController.getServiceDetails);
+router.get('/:categoryId', serviceController.getServicesByCategory);
 exports.default = router;
