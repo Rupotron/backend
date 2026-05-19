@@ -114,7 +114,7 @@ const loginWithGoogle = async (idToken) => {
         throw { statusCode: 401, message: 'Google account email is not verified' };
     }
     const email = profile.email.toLowerCase();
-    const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shom';
+    const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shome';
     const lastName = profile.family_name || profile.name?.split(' ').slice(1).join(' ') || 'User';
     const existingUser = await prisma_1.prisma.user.findUnique({ where: { email } });
     if (existingUser?.isDeleted) {

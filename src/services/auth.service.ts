@@ -150,7 +150,7 @@ export const loginWithGoogle = async (idToken: string) => {
   }
 
   const email = profile.email.toLowerCase();
-  const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shom';
+  const firstName = profile.given_name || profile.name?.split(' ')[0] || 'Shome';
   const lastName = profile.family_name || profile.name?.split(' ').slice(1).join(' ') || 'User';
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
